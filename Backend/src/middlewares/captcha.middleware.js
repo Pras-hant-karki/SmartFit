@@ -1,5 +1,6 @@
 import { asyncHandler } from "../utils/asynchandler.js";
 import { apiError } from "../utils/apiError.js";
+import { apiResponse } from "../utils/apiResponse.js";
 
 const HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify";
 
@@ -12,7 +13,9 @@ export const verifyCaptcha = asyncHandler(async (req, res, next) => {
 
     const token = req.body["h-captcha-response"];
     if (!token) {
-        throw new apiError(400, "CAPTCHA token missing. Please complete the CAPTCHA.");
+        return res.status(200).json(
+            new apiResponse(200, { captchaRequired: true }, "Please complete CAPTCHA verification.")
+        );
     }
 
     const params = new URLSearchParams({ secret, response: token });

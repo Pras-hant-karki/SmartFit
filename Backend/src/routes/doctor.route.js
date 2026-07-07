@@ -60,9 +60,10 @@ router.post(
         { name: "profilepicture", maxCount: 1 },
         { name: "medicallicense", maxCount: 1 },
     ]),
+    verifyCaptcha,
     registerdoctor
 );
-router.post("/login", verifyCaptcha, logindoctor);
+router.post("/login", logindoctor);
 router.post("/login/verify-mfa", verifyMfaToken, verifyLoginMfa);
 router.post("/renew-access-token", accesstokenrenewal);
 

@@ -44,9 +44,10 @@ router.post(
         { name: "profilepicture", maxCount: 1 },
         { name: "appointmentletter", maxCount: 1 },
     ]),
+    verifyCaptcha,
     registeradmin
 );
-router.post("/login", verifyCaptcha, loginadmin);
+router.post("/login", loginadmin);
 router.post("/login/verify-mfa", verifyMfaToken, verifyLoginMfa);
 router.post("/renew-access-token", accesstokenrenewal);
 

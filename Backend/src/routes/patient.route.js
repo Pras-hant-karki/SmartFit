@@ -43,8 +43,8 @@ import {
 const router = Router();
 
 // Auth — public
-router.post("/register", verifyCaptcha, upload.single("profilepicture"), registerPatient);
-router.post("/login", verifyCaptcha, loginPatient);
+router.post("/register", upload.single("profilepicture"), verifyCaptcha, registerPatient);
+router.post("/login", loginPatient);
 router.post("/login/verify-mfa", verifyMfaToken, verifyLoginMfa);
 router.post("/renew-access-token", accesstokenrenewal);
 

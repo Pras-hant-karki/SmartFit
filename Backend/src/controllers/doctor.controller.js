@@ -324,6 +324,24 @@ const logindoctor = asyncHandler(async (req, res) => {
         throw new apiError(423, `Account locked. Try again in ${minutesLeft} minute(s).`);
     }
 
+    // Adaptive CAPTCHA: enforce after 3 failed attempts
+    const captchaSecret = process.env.HCAPTCHA_SECRET_KEY;
+    if (captchaSecret && (doctor.loginAttempts || 0) >= 3) {
+        const captchaToken = req.body["h-captcha-response"];
+        if (!captchaToken) {
+            return res.status(200).json(new apiResponse(200, { captchaRequired: true }, "Please complete CAPTCHA verification."));
+        }
+        const captchaParams = new URLSearchParams({ secret: captchaSecret, response: captchaToken });
+        let captchaData;
+        try {
+            const captchaRes = await fetch("https://hcaptcha.com/siteverify", { method: "POST", body: captchaParams, headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+            captchaData = await captchaRes.json();
+        } catch {
+            throw new apiError(503, "CAPTCHA service unavailable. Please try again.");
+        }
+        if (!captchaData.success) throw new apiError(400, "CAPTCHA verification failed. Please try again.");
+    }
+
     const isPasswordValid = await doctor.ispasswordcorrect(password);
     if (!isPasswordValid) {
         doctor.loginAttempts = (doctor.loginAttempts || 0) + 1;

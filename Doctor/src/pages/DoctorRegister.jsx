@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import HCaptcha from "@/components/ui/HCaptcha";
 import { registerDoctor } from "@/services/doctorApi";
 import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 import {
@@ -39,6 +40,9 @@ const DoctorRegister = () => {
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
   const [shifts, setShifts] = useState([]);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
 
   const {
     register,
@@ -70,10 +74,15 @@ const DoctorRegister = () => {
     formData.append("profilepicture", watch("profilepicture")[0]);
 
     formData.append("shift", JSON.stringify(shifts));
+    if (captchaToken) formData.append("h-captcha-response", captchaToken);
 
     try {
       const res = await dispatch(registerDoctor(formData));
       if (res.meta.requestStatus === "fulfilled") {
+        if (res.payload?.captchaRequired) {
+          setCaptchaRequired(true);
+          return;
+        }
         toast.success("Registration successful!");
         navigate("/");
       } else {
@@ -309,6 +318,10 @@ const DoctorRegister = () => {
 
               </div>
 
+
+              {captchaRequired && (
+                <HCaptcha onVerify={handleCaptchaVerify} />
+              )}
 
               <Button
                 type="submit"

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import HCaptcha from "@/components/ui/HCaptcha";
 import { adminRegister } from "@/services/adminApi";
 import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 
@@ -33,6 +34,9 @@ const AdminRegister = () => {
   const navigate = useNavigate();
 
   const { loading, error } = useSelector((state) => state.auth);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
 
   const {
     register,
@@ -61,11 +65,16 @@ const AdminRegister = () => {
     formData.append("adminId", watch("adminId")[0]);
     formData.append("profilepicture", watch("profilepicture")[0]);
     formData.append("appointmentletter", watch("appointmentletter")[0]);
+    if (captchaToken) formData.append("h-captcha-response", captchaToken);
 
     try {
       const res = await dispatch(adminRegister(formData));
 
       if (res.meta.requestStatus === "fulfilled") {
+        if (res.payload?.captchaRequired) {
+          setCaptchaRequired(true);
+          return;
+        }
         toast.success("Admin Registered Successfully!");
         navigate("/login");
       } else {
@@ -206,6 +215,10 @@ const AdminRegister = () => {
                 />
 
               </div>
+
+              {captchaRequired && (
+                <HCaptcha onVerify={handleCaptchaVerify} />
+              )}
 
               <Button
                 type="submit"

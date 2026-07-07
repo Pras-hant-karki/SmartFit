@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import HCaptcha from "@/components/ui/HCaptcha";
 import { loginPatient, verifyMfaOtp } from "@/services/patientApi";
 import { formatErrorMessage } from "../utils/formatError";
 
@@ -28,6 +29,9 @@ export default function Login() {
     const [otp, setOtp] = useState("");
     const [otpLoading, setOtpLoading] = useState(false);
     const [formData, setFormData] = useState({ email: "", password: "" });
+    const [captchaRequired, setCaptchaRequired] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState("");
+    const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -40,13 +44,20 @@ export default function Login() {
 
         const email = formData.email.trim();
         const password = formData.password;
+        const captchaPayload = captchaToken ? { "h-captcha-response": captchaToken } : {};
 
         // 1. Probe doctor credentials first (original multi-role detection pattern).
         try {
-            const res = await doctorAxios.post("/login", { email, doctorusername: email, password });
+            const res = await doctorAxios.post("/login", { email, doctorusername: email, password, ...captchaPayload });
+            if (res.data?.data?.captchaRequired) {
+                setCaptchaRequired(true);
+                return;
+            }
             if (res.data?.data?.mfaRequired) {
                 setPendingRole("doctor");
                 setMfaRequired(true);
+                setCaptchaRequired(false);
+                setCaptchaToken("");
                 return;
             }
         } catch {
@@ -54,13 +65,19 @@ export default function Login() {
         }
 
         // 2. Patient login.
-        const result = await dispatch(loginPatient({ email, password }));
+        const result = await dispatch(loginPatient({ email, password, ...captchaPayload }));
 
         if (result.meta?.requestStatus === "fulfilled") {
             const data = result.payload?.data;
+            if (data?.captchaRequired) {
+                setCaptchaRequired(true);
+                return;
+            }
             if (data?.mfaRequired) {
                 setPendingRole("patient");
                 setMfaRequired(true);
+                setCaptchaRequired(false);
+                setCaptchaToken("");
                 return;
             }
             navigate("/dashboard");
@@ -166,6 +183,10 @@ export default function Login() {
                                         </Link>
                                     </div>
 
+                                    {captchaRequired && (
+                                        <HCaptcha onVerify={handleCaptchaVerify} />
+                                    )}
+
                                     <Button
                                         type="submit"
                                         disabled={loading}
@@ -227,7 +248,7 @@ export default function Login() {
 
                                     <button
                                         type="button"
-                                        onClick={() => { setMfaRequired(false); setOtp(""); setLoginError(null); setPendingRole(null); }}
+                                        onClick={() => { setMfaRequired(false); setOtp(""); setLoginError(null); setPendingRole(null); setCaptchaRequired(false); setCaptchaToken(""); }}
                                         className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
                                     >
                                         ← Back to login

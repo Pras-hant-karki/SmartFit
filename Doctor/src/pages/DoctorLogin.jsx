@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import HCaptcha from "@/components/ui/HCaptcha";
 import { loginDoctor, verifyMfaDoctor } from "@/services/doctorApi";
 import { Loader2, Mail, Lock, Stethoscope, AlertCircle, ShieldCheck } from "lucide-react";
 
@@ -26,6 +27,9 @@ const DoctorLogin = () => {
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [mfaError, setMfaError] = useState(null);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
 
   const {
     register,
@@ -40,10 +44,18 @@ const DoctorLogin = () => {
   }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data) => {
-    const res = await dispatch(loginDoctor(data));
+    const payload = { ...data };
+    if (captchaToken) payload["h-captcha-response"] = captchaToken;
+    const res = await dispatch(loginDoctor(payload));
     if (res.meta.requestStatus === "fulfilled") {
+      if (res.payload?.captchaRequired) {
+        setCaptchaRequired(true);
+        return;
+      }
       if (res.payload?.mfaRequired) {
         setMfaRequired(true);
+        setCaptchaRequired(false);
+        setCaptchaToken("");
         return;
       }
       toast.success("Login successful!");
@@ -153,6 +165,10 @@ const DoctorLogin = () => {
                     </Button>
                   </div>
 
+                  {captchaRequired && (
+                    <HCaptcha onVerify={handleCaptchaVerify} />
+                  )}
+
                   <Button
                     type="submit"
                     disabled={loading}
@@ -230,7 +246,7 @@ const DoctorLogin = () => {
 
                   <button
                     type="button"
-                    onClick={() => { setMfaRequired(false); setOtp(""); setMfaError(null); }}
+                    onClick={() => { setMfaRequired(false); setOtp(""); setMfaError(null); setCaptchaRequired(false); setCaptchaToken(""); }}
                     className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
                   >
                     ← Back to login

@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentDoctor, sendForgotPasswordOtp, sendUpdatetPasswordOtp } from "../services/doctorApi";
+import HCaptcha from "@/components/ui/HCaptcha";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,10 @@ function SendOtp() {
     );
   }
 
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
+
   const submitHandler = async (data) => {
     try {
       // Use email from form if not authenticated, or from user object if authenticated
@@ -54,14 +59,21 @@ function SendOtp() {
         return;
       }
 
+      const payload = { email };
+      if (!isAuthenticated && captchaToken) payload["h-captcha-response"] = captchaToken;
+
       // Use different API based on authentication status
       const action = isAuthenticated
-        ? sendUpdatetPasswordOtp({ email })
-        : sendForgotPasswordOtp({ email });
+        ? sendUpdatetPasswordOtp(payload)
+        : sendForgotPasswordOtp(payload);
 
       const result = await dispatch(action);
 
       if (result.meta?.requestStatus === "fulfilled") {
+        if (!isAuthenticated && result.payload?.captchaRequired) {
+          setCaptchaRequired(true);
+          return;
+        }
         // Navigate immediately with the email and flow type
         navigate("/verify-otp", {
           state: {
@@ -144,6 +156,10 @@ function SendOtp() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error.message || "Failed to send OTP"}</AlertDescription>
                   </Alert>
+                )}
+
+                {!isAuthenticated && captchaRequired && (
+                  <HCaptcha onVerify={handleCaptchaVerify} />
                 )}
 
                 <Button

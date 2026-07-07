@@ -151,7 +151,7 @@ export const sendForgotPasswordOtp = createAsyncThunk(
     async (data, { rejectWithValue }) => {
         try {
             const res = await api.post("/forgot-password/send-otp", data);
-            return res.data.message;
+            return res.data.data;
         } catch (error) {
             return rejectWithValue(error.response?.data || "Failed to send OTP");
         }

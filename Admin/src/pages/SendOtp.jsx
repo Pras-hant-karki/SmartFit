@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -7,6 +7,7 @@ import {
   adminForgotPasswordSendOtp,
   adminSendUpdatePasswordOtp,
 } from "@/services/adminApi";
+import HCaptcha from "@/components/ui/HCaptcha";
 
 import { useNavigate } from "react-router-dom";
 
@@ -48,19 +49,30 @@ const AdminSendOtp = () => {
     },
   });
 
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
+
   const submitHandler = async (data) => {
     try {
       const email = isAuthenticated ? admin?.email : data.email;
 
       if (!email) return;
 
+      const forgotPayload = { email };
+      if (!isAuthenticated && captchaToken) forgotPayload["h-captcha-response"] = captchaToken;
+
       const action = isAuthenticated
         ? adminSendUpdatePasswordOtp()
-        : adminForgotPasswordSendOtp({ email });
+        : adminForgotPasswordSendOtp(forgotPayload);
 
       const result = await dispatch(action);
 
       if (result.meta.requestStatus === "fulfilled") {
+        if (!isAuthenticated && result.payload?.captchaRequired) {
+          setCaptchaRequired(true);
+          return;
+        }
         navigate("/verify-otp", {
           state: {
             email,
@@ -148,6 +160,10 @@ const AdminSendOtp = () => {
                       {error.message || "Failed to send OTP"}
                     </AlertDescription>
                   </Alert>
+                )}
+
+                {!isAuthenticated && captchaRequired && (
+                  <HCaptcha onVerify={handleCaptchaVerify} />
                 )}
 
                 {/* Submit Button */}
