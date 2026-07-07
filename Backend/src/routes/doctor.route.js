@@ -60,7 +60,6 @@ router.post(
         { name: "profilepicture", maxCount: 1 },
         { name: "medicallicense", maxCount: 1 },
     ]),
-    verifyCaptcha,
     registerdoctor
 );
 router.post("/login", logindoctor);
@@ -91,7 +90,7 @@ router.post("/update-password/verify-otp", verifyAuth, verifyotp);
 router.patch("/update-password", verifyAuth, updatepassword);
 
 // Forgot password (public — rate limited in app.js)
-router.post("/forgot-password/send-otp", verifyCaptcha, sendForgetPasswordOtp);
+router.post("/forgot-password/send-otp", sendForgetPasswordOtp);
 router.post("/forgot-password/verify-otp", verifyTempjwt, verifyForgotPasswordOtp);
 router.patch("/forgot-password/update-password", verifyTempjwt, resetForgottenPassword);
 

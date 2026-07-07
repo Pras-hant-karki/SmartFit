@@ -44,7 +44,6 @@ router.post(
         { name: "profilepicture", maxCount: 1 },
         { name: "appointmentletter", maxCount: 1 },
     ]),
-    verifyCaptcha,
     registeradmin
 );
 router.post("/login", loginadmin);

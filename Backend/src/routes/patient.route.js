@@ -43,7 +43,7 @@ import {
 const router = Router();
 
 // Auth — public
-router.post("/register", upload.single("profilepicture"), verifyCaptcha, registerPatient);
+router.post("/register", upload.single("profilepicture"), registerPatient);
 router.post("/login", loginPatient);
 router.post("/login/verify-mfa", verifyMfaToken, verifyLoginMfa);
 router.post("/renew-access-token", accesstokenrenewal);
@@ -63,7 +63,7 @@ router.post("/update-password/verify-otp", verifyAuth, verifyotp);
 router.patch("/update-password", verifyAuth, updatepassword);
 
 // Forgot password (public — rate limited in app.js)
-router.post("/forgot-password/send-otp", verifyCaptcha, sendForgetPasswordOtp);
+router.post("/forgot-password/send-otp", sendForgetPasswordOtp);
 router.post("/forgot-password/verify-otp", verifyTempjwt, verifyForgotPasswordOtp);
 router.patch("/forgot-password/update-password", verifyTempjwt, resetForgottenPassword);
 
