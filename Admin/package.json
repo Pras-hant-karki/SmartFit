@@ -28,7 +28,8 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.4",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.14"
+    "tailwindcss": "^4.1.14",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

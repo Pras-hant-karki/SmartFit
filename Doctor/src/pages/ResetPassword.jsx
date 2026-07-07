@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Lock, ArrowLeft, AlertCircle, Shield } from "lucide-react";
+import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 
 function ResetPassword() {
   const dispatch = useDispatch();
@@ -129,13 +130,18 @@ function ResetPassword() {
                       className="pl-10"
                       {...register("newPassword", {
                         required: "New password is required",
-                        minLength: {
-                          value: 8,
-                          message: "Password must be at least 8 characters",
+                        validate: (v) => {
+                          if (!v || v.length < 12) return "Password must be at least 12 characters";
+                          if (!/[A-Z]/.test(v)) return "Password must contain at least one uppercase letter";
+                          if (!/[a-z]/.test(v)) return "Password must contain at least one lowercase letter";
+                          if (!/\d/.test(v)) return "Password must contain at least one number";
+                          if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(v)) return "Password must contain at least one special character";
+                          return true;
                         },
                       })}
                     />
                   </div>
+                  <PasswordStrengthMeter password={password} />
                   {errors.newPassword && (
                     <p className="text-red-500 text-xs mt-1">{errors.newPassword.message}</p>
                   )}

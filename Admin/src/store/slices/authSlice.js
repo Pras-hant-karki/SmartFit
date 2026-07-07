@@ -3,8 +3,9 @@ import {
     adminRegister,
     adminLogin,
     adminLogout,
+    verifyMfaAdmin,
+    getAdmin,
 } from "@/services/adminApi";
-import { getAdmin } from "@/services/adminApi";
 
 const initialState = {
     user: null,
@@ -47,11 +48,30 @@ const adminAuthSlice = createSlice({
         });
         builder.addCase(adminLogin.fulfilled, (state, action) => {
             state.loading = false;
+            if (action.payload?.mfaRequired) {
+                state.isAuthenticated = false;
+            } else {
+                state.isAuthenticated = true;
+                state.user = action.payload?.user;
+            }
+            state.isInitialized = true;
+            state.error = null;
+        });
+
+        builder.addCase(verifyMfaAdmin.pending, (state) => {
+            state.loading = true;
+            state.error = null;
+        });
+        builder.addCase(verifyMfaAdmin.fulfilled, (state, action) => {
+            state.loading = false;
             state.isAuthenticated = true;
             state.user = action.payload?.user;
             state.isInitialized = true;
             state.error = null;
-            
+        });
+        builder.addCase(verifyMfaAdmin.rejected, (state, action) => {
+            state.loading = false;
+            state.error = action.payload || "OTP verification failed";
         });
         builder.addCase(adminLogin.rejected, (state, action) => {
             state.loading = false;

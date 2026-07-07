@@ -1,55 +1,83 @@
-import express from "express"
-import cors from "cors"
-import cookieparser from "cookie-parser"
+import express from "express";
+import cors from "cors";
+import cookieparser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
+const app = express();
+const isProduction = process.env.NODE_ENV === "production";
 
+// Security headers
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // allow serving static files to other origins
+    contentSecurityPolicy: isProduction ? undefined : false,  // disable CSP in dev to avoid blocking hot-reload
+}));
 
-const app = express()
-const allowedOrigins = [
+const envOrigins = [
     process.env.CORS_ORIGIN_DOCTOR,
     process.env.CORS_ORIGIN_PATIENT,
     process.env.CORS_ORIGIN_ADMIN,
+    process.env.CORS_ORIGINS,
+]
+    .filter(Boolean)
+    .flatMap((origin) => origin.split(","))
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const allowedOrigins = [
+    ...envOrigins,
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
 ].filter(Boolean);
+
+const isLocalDevOrigin = (origin) =>
+    !isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 
 app.use(
     cors({
         origin: function (origin, callback) {
-            if (!origin) return callback(null, true); 
-            if (allowedOrigins.includes(origin)) {
+            // BUG-015 fix: null/missing origin (e.g. curl, Postman) is only allowed in development.
+            if (!origin) {
+                if (!isProduction) return callback(null, true);
+                return callback(new Error("CORS: requests without an Origin header are not allowed in production"));
+            }
+            if (allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
                 callback(null, true);
             } else {
-                callback(new Error("Not allowed by CORS"));
+                callback(new Error(`Not allowed by CORS: ${origin}`));
             }
         },
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
     })
 );
-app.use(cookieparser())
-app.use(express.json({ limit: "20kb" }))
-app.use(express.urlencoded({ extended: true, limit: "20kb" }))
-app.use(express.static("public"))
 
-import patientRouter from "./routes/patient.route.js"
-import doctorRouter from "./routes/doctor.route.js"
-import adminRouter from "./routes/admin.route.js"
-import appointmentRouter from "./routes/appointment.route.js"
+app.use(cookieparser());
+app.use(express.json({ limit: "20kb" }));
+app.use(express.urlencoded({ extended: true, limit: "20kb" }));
+app.use(express.static("public"));
+
+import patientRouter from "./routes/patient.route.js";
+import doctorRouter from "./routes/doctor.route.js";
+import adminRouter from "./routes/admin.route.js";
+import appointmentRouter from "./routes/appointment.route.js";
 import cronRoutes from "./routes/cron.route.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js"
-import rateLimit from "express-rate-limit";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 
-const isProduction = process.env.NODE_ENV === "production";
-
+// Global rate limiter
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isProduction ? 300 : 5000,
-  standardHeaders: true,
-  legacyHeaders: false,
+    windowMs: 15 * 60 * 1000,
+    max: isProduction ? 300 : 5000,
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
+// Login rate limiters
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: isProduction ? 20 : 1000,
@@ -72,25 +100,55 @@ const adminAuthLimiter = rateLimit({
     },
 });
 
+// BUG-004 fix: OTP endpoints were previously unrated.
+const otpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: isProduction ? 10 : 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { statusCode: 429, message: "Too many OTP requests. Please wait before requesting another." },
+});
+
+// MFA verification limiter
+const mfaLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: isProduction ? 10 : 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { statusCode: 429, message: "Too many MFA verification attempts." },
+});
+
 app.use(limiter);
+
+// Auth rate limiting
 app.use("/api/v1/patient/login", authLimiter);
 app.use("/api/v1/doctor/login", authLimiter);
 app.use("/api/v1/admin/login", adminAuthLimiter);
 
+// MFA verification rate limiting
+app.use("/api/v1/patient/login/verify-mfa", mfaLimiter);
+app.use("/api/v1/doctor/login/verify-mfa", mfaLimiter);
+app.use("/api/v1/admin/login/verify-mfa", mfaLimiter);
 
+// OTP rate limiting — send and verify
+app.use("/api/v1/patient/forgot-password/send-otp", otpLimiter);
+app.use("/api/v1/doctor/forgot-password/send-otp", otpLimiter);
+app.use("/api/v1/patient/forgot-password/verify-otp", otpLimiter);
+app.use("/api/v1/doctor/forgot-password/verify-otp", otpLimiter);
+app.use("/api/v1/patient/update-password/send-otp", otpLimiter);
+app.use("/api/v1/doctor/update-password/send-otp", otpLimiter);
+
+// Routes
 app.use("/api/v1", cronRoutes);
-app.use("/api/v1/patient", patientRouter)
-app.use("/api/v1/doctor", doctorRouter)
-app.use("/api/v1/admin", adminRouter)
-app.use("/api/v1/patient/appointments", appointmentRouter)
+app.use("/api/v1/patient", patientRouter);
+app.use("/api/v1/doctor", doctorRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/patient/appointments", appointmentRouter);
 app.use(errorMiddleware);
 
 app.get("/", (req, res) => {
     res.send("Backend is running successfully!");
 });
 
-
-
-
-export { app }
+export { app };
 export default app;

@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Shield,
 } from "lucide-react";
+import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 
 const AdminResetPassword = () => {
   const dispatch = useDispatch();
@@ -142,13 +143,18 @@ const AdminResetPassword = () => {
                     className="pl-10"
                     {...register("newPassword", {
                       required: "New password is required",
-                      minLength: {
-                        value: 8,
-                        message: "Password must be at least 8 characters",
+                      validate: (v) => {
+                        if (!v || v.length < 12) return "Password must be at least 12 characters";
+                        if (!/[A-Z]/.test(v)) return "Password must contain at least one uppercase letter";
+                        if (!/[a-z]/.test(v)) return "Password must contain at least one lowercase letter";
+                        if (!/\d/.test(v)) return "Password must contain at least one number";
+                        if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(v)) return "Password must contain at least one special character";
+                        return true;
                       },
                     })}
                   />
                 </div>
+                <PasswordStrengthMeter password={newPassword} />
                 {errors.newPassword && (
                   <p className="text-red-500 text-xs">
                     {errors.newPassword.message}

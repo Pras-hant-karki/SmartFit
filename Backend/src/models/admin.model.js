@@ -27,6 +27,10 @@ const adminSchema = new Schema(
     },
     verificationdocs: { type: adminDocumentSchema, required: true },
     refreshtoken: { type: String, select: false },
+    loginAttempts: { type: Number, default: 0, select: false },
+    lockedUntil: { type: Date, default: null, select: false },
+    passwordChangedAt: { type: Date, select: false },
+    passwordHistory: { type: [String], default: [], select: false },
   },
   { timestamps: true }
 );
@@ -56,9 +60,10 @@ adminSchema.methods.generateaccesstoken = function () {
   );
 };
 
+// BUG-001 fix: role claim included.
 adminSchema.methods.generaterefreshtoken = function () {
   return jwt.sign(
-    { _id: this._id },
+    { _id: this._id, role: "admin" },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
   );

@@ -1,7 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "./api"; 
-
-const ADMIN_ACCESS_TOKEN_KEY = "smartfit_admin_access_token";
+import api from "./api";
 
 export const adminRegister = createAsyncThunk(
     "admin/register",
@@ -22,11 +20,19 @@ export const adminLogin = createAsyncThunk(
     async (payload, { rejectWithValue }) => {
         try {
             const res = await api.post("/login", payload);
-            const accessToken = res.data?.data?.accesstoken;
-            if (accessToken) {
-                localStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, accessToken);
-            }
-            return res.data.data; 
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data || err.message);
+        }
+    }
+);
+
+export const verifyMfaAdmin = createAsyncThunk(
+    "admin/verifyMfa",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const res = await api.post("/login/verify-mfa", payload);
+            return res.data.data;
         } catch (err) {
             return rejectWithValue(err.response?.data || err.message);
         }
@@ -42,8 +48,6 @@ export const adminLogout = createAsyncThunk(
             return res.data?.data;
         } catch (err) {
             return rejectWithValue(err.response?.data || err.message);
-        } finally {
-            localStorage.removeItem(ADMIN_ACCESS_TOKEN_KEY);
         }
     }
 )

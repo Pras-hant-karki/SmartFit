@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { adminRegister } from "@/services/adminApi";
+import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 
 import {
   Loader2,
@@ -146,13 +147,31 @@ const AdminRegister = () => {
                 />
 
                 {/* Password */}
-                <FormBox
-                  label="Password *"
-                  type="password"
-                  placeholder="Password"
-                  register={register("password", { required: "Password required" })}
-                  error={errors.password}
-                />
+                <div className="space-y-2">
+                  <Label>Password *</Label>
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    {...register("password", {
+                      required: "Password is required",
+                      validate: (v) => {
+                        if (!v || v.length < 12) return "Password must be at least 12 characters";
+                        if (!/[A-Z]/.test(v)) return "Password must contain at least one uppercase letter";
+                        if (!/[a-z]/.test(v)) return "Password must contain at least one lowercase letter";
+                        if (!/\d/.test(v)) return "Password must contain at least one number";
+                        if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(v)) return "Password must contain at least one special character";
+                        return true;
+                      },
+                    })}
+                    className={errors.password ? "border-red-500" : ""}
+                  />
+                  <PasswordStrengthMeter password={watch("password")} />
+                  {errors.password && (
+                    <p className="text-red-500 text-xs flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {errors.password.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* DOCUMENT UPLOAD SECTION */}

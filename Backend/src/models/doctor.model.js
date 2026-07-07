@@ -53,6 +53,10 @@ const doctorSchema = new Schema(
     department: { type: String, trim: true, default: "" },
     specialization: { type: String, trim: true, default: "" },
     refreshtoken: { type: String, select: false },
+    loginAttempts: { type: Number, default: 0, select: false },
+    lockedUntil: { type: Date, default: null, select: false },
+    passwordChangedAt: { type: Date, select: false },
+    passwordHistory: { type: [String], default: [], select: false },
   },
   { timestamps: true }
 );
@@ -82,9 +86,10 @@ doctorSchema.methods.generateaccesstoken = function () {
   );
 };
 
+// BUG-001 fix: role claim included.
 doctorSchema.methods.generaterefreshtoken = function () {
   return jwt.sign(
-    { _id: this._id },
+    { _id: this._id, role: "doctor" },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
   );

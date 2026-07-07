@@ -3,7 +3,8 @@ import {
   registerDoctor,
   loginDoctor,
   logoutDoctor,
-  getCurrentDoctor
+  getCurrentDoctor,
+  verifyMfaDoctor,
 } from "../../services/doctorApi";
 
 const initialState = {
@@ -54,9 +55,29 @@ const authSlice = createSlice({
 
     builder.addCase(loginDoctor.fulfilled, (state, action) => {
       state.loading = false;
+      if (action.payload?.mfaRequired) {
+        // First factor passed — wait for OTP before marking authenticated.
+        state.isAuthenticated = false;
+      } else {
+        state.user = action.payload?.user || null;
+        state.isAuthenticated = true;
+      }
+      state.isInitialized = true;
+    });
+
+    builder.addCase(verifyMfaDoctor.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(verifyMfaDoctor.fulfilled, (state, action) => {
+      state.loading = false;
       state.user = action.payload?.user || null;
       state.isAuthenticated = true;
       state.isInitialized = true;
+    });
+    builder.addCase(verifyMfaDoctor.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
     });
 
     builder.addCase(loginDoctor.rejected, (state, action) => {

@@ -2,8 +2,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "./api";
 
-const DOCTOR_ACCESS_TOKEN_KEY = "smartfit_doctor_access_token";
-
 // ✅ Register Doctor
 export const registerDoctor = createAsyncThunk(
     "doctor/registerForDoctor",
@@ -24,16 +22,21 @@ export const loginDoctor = createAsyncThunk(
     async (credentials, { rejectWithValue }) => {
         try {
             const res = await api.post("/login", credentials);
-
-            const accessToken = res?.data?.data?.accesstoken || res?.data?.data?.accessToken;
-            if (accessToken) {
-                localStorage.setItem(DOCTOR_ACCESS_TOKEN_KEY, accessToken);
-                api.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-            }
-
             return res.data.data;
         } catch (error) {
             return rejectWithValue(error.response?.data || "Login failed");
+        }
+    }
+);
+
+export const verifyMfaDoctor = createAsyncThunk(
+    "doctor/verifyMfaForDoctor",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const res = await api.post("/login/verify-mfa", payload);
+            return res.data.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data || "OTP verification failed");
         }
     }
 );
@@ -47,9 +50,6 @@ export const logoutDoctor = createAsyncThunk(
             return res.data.message;
         } catch (error) {
             return rejectWithValue(error.response?.data || "Logout failed");
-        } finally {
-            localStorage.removeItem(DOCTOR_ACCESS_TOKEN_KEY);
-            delete api.defaults.headers.common["Authorization"];
         }
     }
 );
@@ -181,13 +181,6 @@ export const resetForgottenPassword = createAsyncThunk(
         }
     }
 );
-const hasRefreshCookie = () => {
-    try {
-        return document.cookie.split(";").some((c) => c.trim().startsWith("refreshToken="));
-    } catch {
-        return false;
-    }
-};
 export const getCurrentDoctor = createAsyncThunk(
     "doctor/getCurrentDoctorForDoctor",
     async (_, { rejectWithValue }) => {

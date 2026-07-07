@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerDoctor } from "@/services/doctorApi";
+import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 import {
   Loader2,
   Building2,
@@ -46,6 +47,7 @@ const DoctorRegister = () => {
     watch,
     formState: { errors },
   } = useForm();
+  const password = watch("password");
 
   const onSubmit = async (data) => {
     // Validate required documents
@@ -170,9 +172,25 @@ const DoctorRegister = () => {
                   <Input
                     type="password"
                     placeholder="Password"
-                    {...register("password", { required: "Password required" })}
+                    {...register("password", {
+                      required: "Password is required",
+                      validate: (v) => {
+                        if (!v || v.length < 12) return "Password must be at least 12 characters";
+                        if (!/[A-Z]/.test(v)) return "Password must contain at least one uppercase letter";
+                        if (!/[a-z]/.test(v)) return "Password must contain at least one lowercase letter";
+                        if (!/\d/.test(v)) return "Password must contain at least one number";
+                        if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(v)) return "Password must contain at least one special character";
+                        return true;
+                      },
+                    })}
                     className={errors.password ? "border-red-500" : ""}
                   />
+                  <PasswordStrengthMeter password={password} />
+                  {errors.password && (
+                    <p className="text-red-500 text-xs flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {errors.password.message}
+                    </p>
+                  )}
                 </div>
 
                 {/* Age */}

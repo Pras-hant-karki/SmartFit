@@ -24,6 +24,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerPatient } from "@/services/patientApi";
 import { formatErrorMessage } from "../utils/formatError";
+import PasswordStrengthMeter from "@/components/ui/PasswordStrengthMeter";
 import { 
   Loader2, 
   User, 
@@ -85,7 +86,7 @@ const Register = () => {
     const formData = new FormData();
     const patientusername = makePatientUsername(data.patientname, data.email);
     Object.entries(data).forEach(([key, value]) => {
-      if (key !== "confirmPassword") formData.append(key, value);
+      formData.append(key, value);
     });
     formData.set("patientusername", patientusername);
     if (file) formData.append("profilepicture", file);
@@ -272,12 +273,16 @@ const Register = () => {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Create a strong password"
-                      {...register("password", { 
+                      {...register("password", {
                         required: "Password is required",
-                        minLength: {
-                          value: 8,
-                          message: "Password must be at least 8 characters"
-                        }
+                        validate: (v) => {
+                          if (!v || v.length < 12) return "Password must be at least 12 characters";
+                          if (!/[A-Z]/.test(v)) return "Password must contain at least one uppercase letter";
+                          if (!/[a-z]/.test(v)) return "Password must contain at least one lowercase letter";
+                          if (!/\d/.test(v)) return "Password must contain at least one number";
+                          if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(v)) return "Password must contain at least one special character";
+                          return true;
+                        },
                       })}
                       className={`${errors.password ? "border-red-500" : ""} pr-12`}
                     />
@@ -289,6 +294,7 @@ const Register = () => {
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
+                  <PasswordStrengthMeter password={password} />
                   {errors.password && (
                     <p className="text-red-500 text-xs flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />

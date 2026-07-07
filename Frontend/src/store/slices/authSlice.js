@@ -3,7 +3,8 @@ import {
   registerPatient,
   loginPatient,
   logoutPatient,
-  getCurrentPatient
+  getCurrentPatient,
+  verifyMfaOtp,
 } from "../../services/patientApi";
 import { isPending, isFulfilled, isRejected } from "@reduxjs/toolkit";
 
@@ -38,6 +39,16 @@ const authSlice = createSlice({
 
 
     builder.addCase(loginPatient.fulfilled, (state, action) => {
+      if (action.payload?.data?.mfaRequired) {
+        state.isAuthenticated = false;
+      } else {
+        state.user = action.payload?.data?.user || null;
+        state.isAuthenticated = true;
+      }
+      state.isInitialized = true;
+    })
+
+    builder.addCase(verifyMfaOtp.fulfilled, (state, action) => {
       state.user = action.payload?.data?.user || null;
       state.isAuthenticated = true;
       state.isInitialized = true;
