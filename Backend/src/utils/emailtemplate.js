@@ -1,3 +1,12 @@
+// Prevent HTML injection in email bodies from user-controlled fields.
+const escapeHtml = (str) =>
+    String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;");
+
 const otpTemplate = (otp) => `
   <div style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px;">
     <div style="max-width: 500px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 30px;">
@@ -139,7 +148,7 @@ const welcomeemailtemplate = (username,) => `
     </div>
 
     <div class="content">
-      <p>Hi ${username},</p>
+      <p>Hi ${escapeHtml(username)},</p>
       <p>We're excited to have you onboard! Your account has been successfully created.</p>
       <p>You can now access your personalized dashboard, book appointments, manage records, and much more.</p>
       <p>If you didn't register for a SmartFit account, please ignore this message or contact our support team immediately.</p>
@@ -221,7 +230,7 @@ const logintemplate = (username) => `
     </div>
 
     <div class="content">
-      <p>Hi ${username},</p>
+      <p>Hi ${escapeHtml(username)},</p>
       <p>Your SmartFit account was successfully accessed.</p>
 
       <p>If this was you, no further action is needed.</p>
@@ -304,18 +313,18 @@ const appointmentconfirmation = (_otpCode,patientName,doctorName,department,appo
       </div>
 
       <div class="section">
-        <p>Dear <span class="highlight">${patientName}</span>,</p>
+        <p>Dear <span class="highlight">${escapeHtml(patientName)}</span>,</p>
         <p>
-          Your appointment with <strong>Dr. ${doctorName}</strong> has been
+          Your appointment with <strong>Dr. ${escapeHtml(doctorName)}</strong> has been
           successfully confirmed.
         </p>
       </div>
 
       <div class="section">
         <p><strong>Appointment Details:</strong></p>
-        <p>Date: <span class="highlight">${appointmentDate}</span></p>
-        <p>Time: <span class="highlight">${appointmentTime}</span></p>
-        <p>Department: <span class="highlight">${department}</span></p>
+        <p>Date: <span class="highlight">${escapeHtml(String(appointmentDate))}</span></p>
+        <p>Time: <span class="highlight">${escapeHtml(appointmentTime)}</span></p>
+        <p>Department: <span class="highlight">${escapeHtml(department)}</span></p>
         <p>Hospital: <span class="highlight">SmartFit Hospital</span></p>
       </div>
 
@@ -375,9 +384,9 @@ const appointmentcancellation=(patientName,doctorName,appointmentDate,appointmen
   <body>
     <div class="container">
       <h2> Appointment Cancelled</h2>
-      <p>Dear ${patientName},</p>
+      <p>Dear ${escapeHtml(patientName)},</p>
 
-      <p>Your appointment with <strong>Dr. ${doctorName}</strong> on <strong>${appointmentDate}</strong> at <strong>${appointmentTime}</strong> has been <strong>cancelled</strong>.</p>
+      <p>Your appointment with <strong>Dr. ${escapeHtml(doctorName)}</strong> on <strong>${escapeHtml(String(appointmentDate))}</strong> at <strong>${escapeHtml(appointmentTime)}</strong> has been <strong>cancelled</strong>.</p>
 
       <p>If this was a mistake or you'd like to reschedule, please contact us at <strong>support@SmartFit</strong> or call <strong>1800-563-2316</strong>.</p>
 
@@ -428,14 +437,14 @@ const appointmentupdation = (patientName,doctorName,appointmentDate,appointmentT
   <body>
     <div class="container">
       <h2>Appointment Updated</h2>
-      <p>Dear ${patientName},</p>
+      <p>Dear ${escapeHtml(patientName)},</p>
 
       <p>Your appointment has been <strong>updated</strong>. Please find the revised details below:</p>
 
       <div class="details">
-        <p><strong>Doctor:</strong> Dr. ${doctorName} </p>
-        <p><strong>Date:</strong> ${appointmentDate}</p>
-        <p><strong>Time:</strong> ${appointmentTime}</p>
+        <p><strong>Doctor:</strong> Dr. ${escapeHtml(doctorName)} </p>
+        <p><strong>Date:</strong> ${escapeHtml(String(appointmentDate))}</p>
+        <p><strong>Time:</strong> ${escapeHtml(appointmentTime)}</p>
       </div>
 
       <p>If you have any questions or need further assistance, feel free to contact us at <strong>support@SmartFit</strong> or call <strong>1800-563-2316</strong>.</p>

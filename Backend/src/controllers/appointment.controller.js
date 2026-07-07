@@ -10,6 +10,7 @@ import {
   appointmentconfirmation,
   appointmentupdation,
 } from "../utils/emailtemplate.js";
+import { logAudit } from "../services/auditLog.service.js";
 
 const formatAppointment = (appointment) => {
   return {
@@ -96,6 +97,8 @@ const createAppointment = asyncHandler(async (req, res) => {
         "doctor",
         "doctorname doctorusername department specialization qualification consultationfee"
       );
+
+    logAudit({ userId: req.patient._id, userRole: "patient", action: "appointment_created", resource: `appointment/${created._id}`, ip: req.ip, result: "success", metadata: { doctorId: doctor._id, date: appointmentdate } });
 
     return res
       .status(201)
@@ -211,6 +214,8 @@ const cancelappointment = asyncHandler(async (req, res) => {
 
   await appointment.save();
 
+  logAudit({ userId: req.patient?._id || req.doctor?._id, userRole: req.patient ? "patient" : "doctor", action: "appointment_cancelled", resource: `appointment/${appointmentid}`, ip: req.ip, result: "success" });
+
   sendMail({
     to: appointment.patient.email,
     subject: "Appointment Cancelled",
@@ -268,6 +273,8 @@ const updateappointment = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  logAudit({ userId: req.patient?._id, userRole: "patient", action: "appointment_updated", resource: `appointment/${appointmentid}`, ip: req.ip, result: "success" });
+
   return res
     .status(200)
     .json(new apiResponse(200, appointment));
@@ -284,6 +291,12 @@ const getappointment = asyncHandler(async (req, res) => {
     );
 
   if (!appointment) throw new apiError(404, "Not found");
+
+  // IDOR: patients see only their own appointments; doctors see only their own.
+  if (req.patient && appointment.patient._id.toString() !== req.patient._id.toString())
+    throw new apiError(403, "Access denied");
+  if (req.doctor && appointment.doctor._id.toString() !== req.doctor._id.toString())
+    throw new apiError(403, "Access denied");
 
   return res
     .status(200)

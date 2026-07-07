@@ -55,8 +55,7 @@ const authSlice = createSlice({
 
     builder.addCase(loginDoctor.fulfilled, (state, action) => {
       state.loading = false;
-      if (action.payload?.mfaRequired) {
-        // First factor passed — wait for OTP before marking authenticated.
+      if (action.payload?.mfaRequired || action.payload?.captchaRequired) {
         state.isAuthenticated = false;
       } else {
         state.user = action.payload?.user || null;

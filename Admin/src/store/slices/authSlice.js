@@ -48,7 +48,7 @@ const adminAuthSlice = createSlice({
         });
         builder.addCase(adminLogin.fulfilled, (state, action) => {
             state.loading = false;
-            if (action.payload?.mfaRequired) {
+            if (action.payload?.mfaRequired || action.payload?.captchaRequired) {
                 state.isAuthenticated = false;
             } else {
                 state.isAuthenticated = true;

@@ -39,7 +39,7 @@ const authSlice = createSlice({
 
 
     builder.addCase(loginPatient.fulfilled, (state, action) => {
-      if (action.payload?.data?.mfaRequired) {
+      if (action.payload?.data?.mfaRequired || action.payload?.data?.captchaRequired) {
         state.isAuthenticated = false;
       } else {
         state.user = action.payload?.data?.user || null;

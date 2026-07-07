@@ -49,8 +49,13 @@ export default function HCaptcha({ onVerify }) {
     }, [onVerify]);
 
     return (
-        <div className="flex justify-center my-3">
-            <div ref={containerRef} />
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <p className="text-sm font-medium text-amber-800 text-center">
+                Additional verification required due to suspicious activity.
+            </p>
+            <div className="flex justify-center">
+                <div ref={containerRef} />
+            </div>
         </div>
     );
 }

@@ -3,6 +3,14 @@ import cors from "cors";
 import cookieparser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import patientRouter from "./routes/patient.route.js";
+import doctorRouter from "./routes/doctor.route.js";
+import adminRouter from "./routes/admin.route.js";
+import appointmentRouter from "./routes/appointment.route.js";
+import paymentRouter from "./routes/payment.route.js";
+import cronRoutes from "./routes/cron.route.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
+import { stripeWebhook } from "./controllers/payment.controller.js";
 
 const app = express();
 const isProduction = process.env.NODE_ENV === "production";
@@ -58,16 +66,30 @@ app.use(
 );
 
 app.use(cookieparser());
+
+// Stripe webhook must receive the raw body BEFORE express.json() parses it.
+// Signature verification requires the original raw bytes from Stripe.
+app.post("/api/v1/payment/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+
 app.use(express.json({ limit: "20kb" }));
 app.use(express.urlencoded({ extended: true, limit: "20kb" }));
 app.use(express.static("public"));
 
-import patientRouter from "./routes/patient.route.js";
-import doctorRouter from "./routes/doctor.route.js";
-import adminRouter from "./routes/admin.route.js";
-import appointmentRouter from "./routes/appointment.route.js";
-import cronRoutes from "./routes/cron.route.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js";
+// Strip MongoDB operator keys ($-prefixed) from body and query to prevent NoSQL injection.
+const stripMongoOperators = (obj) => {
+    if (Array.isArray(obj)) { obj.forEach(stripMongoOperators); return; }
+    if (obj && typeof obj === "object") {
+        for (const key of Object.keys(obj)) {
+            if (key.startsWith("$")) { delete obj[key]; }
+            else { stripMongoOperators(obj[key]); }
+        }
+    }
+};
+app.use((req, _res, next) => {
+    if (req.body) stripMongoOperators(req.body);
+    if (req.query) stripMongoOperators(req.query);
+    next();
+});
 
 // Global rate limiter
 const limiter = rateLimit({
@@ -144,6 +166,7 @@ app.use("/api/v1/patient", patientRouter);
 app.use("/api/v1/doctor", doctorRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/patient/appointments", appointmentRouter);
+app.use("/api/v1/payment", paymentRouter);
 app.use(errorMiddleware);
 
 app.get("/", (req, res) => {
